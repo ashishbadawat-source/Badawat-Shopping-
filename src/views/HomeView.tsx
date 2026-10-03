@@ -19,7 +19,18 @@ import {
 import { INITIAL_HERO_IMAGE } from '../data/initialData';
 
 export const HomeView: React.FC = () => {
-  const { products, categories, setActivePage, setSelectedCategoryFilter, setSelectedProductId } = useStore();
+  const { products, categories, banners, setActivePage, setSelectedCategoryFilter, setSelectedProductId } = useStore();
+
+  const [activeBannerIdx, setActiveBannerIdx] = useState(0);
+  const activeBanners = banners.filter((b) => b.isActive);
+  const currentBanner = activeBanners[activeBannerIdx] || activeBanners[0] || {
+    title: 'Shop Smart. Shop Easy.',
+    subtitle: 'Experience curated lifestyle excellence with express Pan-India delivery.',
+    tag: 'Grand Festive Season · Up to 60% Off',
+    image: INITIAL_HERO_IMAGE,
+    linkCategory: 'all',
+    ctaText: 'Explore Collection',
+  };
 
   // Active filter tab for collection
   const [activeTab, setActiveTab] = useState<'trending' | 'bestsellers' | 'newarrivals'>('trending');
@@ -71,8 +82,8 @@ export const HomeView: React.FC = () => {
       <section className="relative rounded-3xl overflow-hidden bg-slate-950 text-white min-h-[480px] lg:min-h-[540px] flex items-center shadow-xl">
         <div className="absolute inset-0 z-0">
           <img
-            src={INITIAL_HERO_IMAGE}
-            alt="Badawat Shopping Exclusive Showcase"
+            src={currentBanner.image}
+            alt={currentBanner.title}
             className="w-full h-full object-cover object-center opacity-40 mix-blend-luminosity scale-100 transition-transform duration-700"
             referrerPolicy="no-referrer"
           />
@@ -82,27 +93,26 @@ export const HomeView: React.FC = () => {
         <div className="relative z-10 max-w-2xl px-6 sm:px-12 py-16 space-y-6">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/30 text-amber-300 text-xs font-semibold tracking-wide">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Grand Festive Season · Up to 60% Off</span>
+            <span>{currentBanner.tag}</span>
           </div>
 
           <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-tight font-heading text-balance">
-            Shop Smart. <br />
-            <span className="text-amber-400">Shop Easy.</span>
+            {currentBanner.title}
           </h1>
 
           <p className="text-sm sm:text-base text-slate-300 leading-relaxed max-w-lg">
-            Experience curated lifestyle excellence. From high-fidelity audio and horology to handcrafted festive silk, discover genuine Indian retail with ultra-fast delivery.
+            {currentBanner.subtitle}
           </p>
 
           <div className="flex flex-wrap items-center gap-4 pt-2">
             <button
               onClick={() => {
-                setSelectedCategoryFilter('all');
+                setSelectedCategoryFilter(currentBanner.linkCategory || 'all');
                 setActivePage('shop');
               }}
               className="px-6 py-3.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-sm flex items-center gap-2 transition-all shadow-lg hover:shadow-amber-500/20"
             >
-              <span>Explore Collection</span>
+              <span>{currentBanner.ctaText}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
             <button
@@ -115,6 +125,22 @@ export const HomeView: React.FC = () => {
               Shop Electronics
             </button>
           </div>
+
+          {/* Banner Selector Dots if more than 1 banner */}
+          {activeBanners.length > 1 && (
+            <div className="flex items-center gap-2 pt-2">
+              {activeBanners.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setActiveBannerIdx(idx)}
+                  className={`h-2 rounded-full transition-all ${
+                    activeBannerIdx === idx ? 'w-8 bg-amber-400' : 'w-2 bg-white/40 hover:bg-white/70'
+                  }`}
+                  aria-label={`Go to slide ${idx + 1}`}
+                />
+              ))}
+            </div>
+          )}
 
           {/* Micro trust stats */}
           <div className="pt-4 border-t border-white/10 flex items-center gap-6 text-xs text-slate-400">

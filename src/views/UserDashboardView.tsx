@@ -42,13 +42,15 @@ export const UserDashboardView: React.FC = () => {
     addToCart,
     toggleWishlist,
     cancelOrder,
+    reviews,
+    cartCount,
     logout,
     addToast,
     isAdmin,
   } = useStore();
 
   const [activeTab, setActiveTab] = useState<
-    'orders' | 'tracking' | 'wishlist' | 'addresses' | 'coupons' | 'notifications' | 'profile'
+    'orders' | 'tracking' | 'wishlist' | 'addresses' | 'coupons' | 'notifications' | 'profile' | 'reviews'
   >(selectedOrderId ? 'tracking' : 'orders');
 
   // Tracking order state
@@ -170,6 +172,16 @@ export const UserDashboardView: React.FC = () => {
           >
             <Heart className="w-4 h-4" />
             <span>My Wishlist ({wishlist.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('reviews')}
+            className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2.5 transition-colors ${
+              activeTab === 'reviews' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-50'
+            }`}
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            <span>My Reviews ({reviews.filter((r) => r.userName.includes('Ashish') || r.userId === currentUser?.id).length})</span>
           </button>
 
           <button
@@ -742,6 +754,58 @@ export const UserDashboardView: React.FC = () => {
                   Update Password
                 </button>
               </form>
+            </div>
+          )}
+
+          {/* TAB 8: MY REVIEWS */}
+          {activeTab === 'reviews' && (
+            <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <h2 className="text-base font-bold text-slate-950 font-heading">
+                  My Ratings & Verified Reviews
+                </h2>
+                <button
+                  onClick={() => setActivePage('shop')}
+                  className="text-xs font-semibold text-amber-700 hover:underline"
+                >
+                  Review More Products →
+                </button>
+              </div>
+
+              {reviews.length === 0 ? (
+                <div className="text-center py-12 text-slate-500 text-xs">
+                  You haven't written any reviews yet.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {reviews.map((rev) => (
+                    <div
+                      key={rev.id}
+                      className="p-5 rounded-2xl bg-slate-50/70 border border-slate-200/80 space-y-2 text-xs"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-slate-900">{rev.productName || 'Badawat Product'}</span>
+                          {rev.verifiedPurchase && (
+                            <span className="text-[10px] text-emerald-800 bg-emerald-100 font-bold px-2 py-0.5 rounded">
+                              Verified Purchase
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-slate-400 text-[11px]">{rev.createdAt}</span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 text-amber-500 font-bold">
+                        {'★'.repeat(rev.rating)}
+                        {'☆'.repeat(5 - rev.rating)}
+                        <span className="text-slate-900 font-bold ml-1">{rev.title}</span>
+                      </div>
+
+                      <p className="text-slate-600 leading-relaxed">{rev.comment}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

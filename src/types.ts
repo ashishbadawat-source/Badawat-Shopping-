@@ -5,6 +5,35 @@ export interface User {
   phone: string;
   role: 'admin' | 'customer';
   avatar?: string;
+  ordersCount?: number;
+  totalSpent?: number;
+  isBlocked?: boolean;
+  createdAt: string;
+}
+
+export interface Banner {
+  id: string;
+  title: string;
+  subtitle: string;
+  tag: string;
+  image: string;
+  linkCategory: string;
+  ctaText: string;
+  isActive: boolean;
+  order: number;
+}
+
+export interface PaymentTransaction {
+  id: string;
+  transactionId: string;
+  orderId: string;
+  orderNumber: string;
+  customerName: string;
+  customerEmail: string;
+  amount: number;
+  paymentMethod: 'upi' | 'card' | 'netbanking' | 'cod';
+  paymentStatus: 'paid' | 'pending' | 'refunded';
+  gatewayRef: string;
   createdAt: string;
 }
 
@@ -127,12 +156,14 @@ export interface Coupon {
 export interface Review {
   id: string;
   productId: string;
+  productName?: string;
   userId: string;
   userName: string;
   rating: number;
   comment: string;
   title: string;
   verifiedPurchase: boolean;
+  status?: 'approved' | 'pending' | 'rejected';
   createdAt: string;
 }
 

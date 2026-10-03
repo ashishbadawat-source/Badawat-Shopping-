@@ -13,6 +13,8 @@ import {
   ActivePage,
   ToastMessage,
   TrackingStep,
+  Banner,
+  PaymentTransaction,
 } from '../types';
 import {
   INITIAL_CATEGORIES,
@@ -22,6 +24,9 @@ import {
   INITIAL_ORDERS,
   INITIAL_REVIEWS,
   INITIAL_SETTINGS,
+  INITIAL_BANNERS,
+  INITIAL_USERS,
+  INITIAL_PAYMENTS,
 } from '../data/initialData';
 
 interface StoreContextType {
@@ -106,7 +111,28 @@ interface StoreContextType {
   // Reviews
   reviews: Review[];
   addReview: (review: Omit<Review, 'id' | 'createdAt'>) => void;
+  deleteReview: (id: string) => void;
+  updateReviewStatus: (id: string, status: 'approved' | 'rejected') => void;
   getProductReviews: (productId: string) => Review[];
+
+  // Users Management
+  users: User[];
+  addUser: (user: Omit<User, 'id' | 'createdAt'>) => void;
+  toggleUserBlock: (userId: string) => void;
+  changeUserRole: (userId: string, role: 'admin' | 'customer') => void;
+  deleteUser: (userId: string) => void;
+
+  // Payments Management
+  payments: PaymentTransaction[];
+  refundPayment: (paymentId: string) => void;
+  markPaymentPaid: (paymentId: string) => void;
+
+  // Banners Management
+  banners: Banner[];
+  addBanner: (banner: Omit<Banner, 'id'>) => void;
+  updateBanner: (id: string, updates: Partial<Banner>) => void;
+  deleteBanner: (id: string) => void;
+  toggleBannerStatus: (id: string) => void;
 
   // Notifications
   notifications: NotificationItem[];
@@ -237,6 +263,33 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return INITIAL_REVIEWS;
   });
 
+  // Users Management
+  const [users, setUsers] = useState<User[]>(() => {
+    const saved = localStorage.getItem('bw_users');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { /* ignore */ }
+    }
+    return INITIAL_USERS;
+  });
+
+  // Payments Transactions
+  const [payments, setPayments] = useState<PaymentTransaction[]>(() => {
+    const saved = localStorage.getItem('bw_payments');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { /* ignore */ }
+    }
+    return INITIAL_PAYMENTS;
+  });
+
+  // Promotional Banners
+  const [banners, setBanners] = useState<Banner[]>(() => {
+    const saved = localStorage.getItem('bw_banners');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { /* ignore */ }
+    }
+    return INITIAL_BANNERS;
+  });
+
   // Notifications
   const [notifications, setNotifications] = useState<NotificationItem[]>([
     {
@@ -301,6 +354,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     localStorage.setItem('bw_settings', JSON.stringify(settings));
   }, [settings]);
+
+  useEffect(() => {
+    localStorage.setItem('bw_users', JSON.stringify(users));
+  }, [users]);
+
+  useEffect(() => {
+    localStorage.setItem('bw_payments', JSON.stringify(payments));
+  }, [payments]);
+
+  useEffect(() => {
+    localStorage.setItem('bw_banners', JSON.stringify(banners));
+  }, [banners]);
 
   // Toast Helpers
   const addToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
@@ -556,6 +621,35 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     setOrders((prev) => [newOrder, ...prev]);
 
+    // Create payment transaction record
+    const paymentTxn: PaymentTransaction = {
+      id: `pay-${Date.now()}`,
+      transactionId: `TXN-${paymentMethod.toUpperCase()}-${Math.floor(1000000000 + Math.random() * 9000000000)}`,
+      orderId: newOrder.id,
+      orderNumber: newOrder.orderNumber,
+      customerName: newOrder.customerName,
+      customerEmail: newOrder.customerEmail,
+      amount: newOrder.grandTotal,
+      paymentMethod,
+      paymentStatus: paymentMethod === 'cod' ? 'pending' : 'paid',
+      gatewayRef: `${paymentMethod.toUpperCase()}/PG/${new Date().toISOString().slice(0, 10).replace(/-/g, '')}/${Math.floor(100000 + Math.random() * 900000)}`,
+      createdAt: new Date().toISOString(),
+    };
+    setPayments((prev) => [paymentTxn, ...prev]);
+
+    // Update user's order count & spent
+    setUsers((prev) =>
+      prev.map((u) =>
+        u.id === newOrder.userId
+          ? {
+              ...u,
+              ordersCount: (u.ordersCount || 0) + 1,
+              totalSpent: (u.totalSpent || 0) + newOrder.grandTotal,
+            }
+          : u
+      )
+    );
+
     // Send notification
     setNotifications((prev) => [
       {
@@ -781,6 +875,106 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return reviews.filter((r) => r.productId === productId);
   };
 
+  const deleteReview = (id: string) => {
+    setReviews((prev) => prev.filter((r) => r.id !== id));
+    addToast('Review deleted', 'info');
+  };
+
+  const updateReviewStatus = (id: string, status: 'approved' | 'rejected') => {
+    setReviews((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, status } : r))
+    );
+    addToast(`Review marked as ${status}`, 'success');
+  };
+
+  // Users Management
+  const addUser = (userData: Omit<User, 'id' | 'createdAt'>) => {
+    const newUser: User = {
+      ...userData,
+      id: `user-${Date.now()}`,
+      createdAt: new Date().toISOString().split('T')[0],
+      ordersCount: 0,
+      totalSpent: 0,
+      isBlocked: false,
+    };
+    setUsers((prev) => [newUser, ...prev]);
+    addToast('User account created!', 'success');
+  };
+
+  const toggleUserBlock = (userId: string) => {
+    setUsers((prev) =>
+      prev.map((u) => (u.id === userId ? { ...u, isBlocked: !u.isBlocked } : u))
+    );
+    addToast('User status updated', 'info');
+  };
+
+  const changeUserRole = (userId: string, role: 'admin' | 'customer') => {
+    setUsers((prev) =>
+      prev.map((u) => (u.id === userId ? { ...u, role } : u))
+    );
+    addToast(`Role changed to ${role.toUpperCase()}`, 'success');
+  };
+
+  const deleteUser = (userId: string) => {
+    setUsers((prev) => prev.filter((u) => u.id !== userId));
+    addToast('User deleted', 'info');
+  };
+
+  // Payments Management
+  const refundPayment = (paymentId: string) => {
+    setPayments((prev) =>
+      prev.map((p) => (p.id === paymentId ? { ...p, paymentStatus: 'refunded' } : p))
+    );
+    const target = payments.find((p) => p.id === paymentId);
+    if (target) {
+      setOrders((prev) =>
+        prev.map((o) => (o.id === target.orderId ? { ...o, paymentStatus: 'refunded' } : o))
+      );
+    }
+    addToast('Payment refunded successfully!', 'success');
+  };
+
+  const markPaymentPaid = (paymentId: string) => {
+    setPayments((prev) =>
+      prev.map((p) => (p.id === paymentId ? { ...p, paymentStatus: 'paid' } : p))
+    );
+    const target = payments.find((p) => p.id === paymentId);
+    if (target) {
+      setOrders((prev) =>
+        prev.map((o) => (o.id === target.orderId ? { ...o, paymentStatus: 'paid' } : o))
+      );
+    }
+    addToast('Payment marked as PAID', 'success');
+  };
+
+  // Banners Management
+  const addBanner = (bData: Omit<Banner, 'id'>) => {
+    const newBanner: Banner = {
+      ...bData,
+      id: `ban-${Date.now()}`,
+    };
+    setBanners((prev) => [...prev, newBanner]);
+    addToast('Promotional banner created!', 'success');
+  };
+
+  const updateBanner = (id: string, updates: Partial<Banner>) => {
+    setBanners((prev) =>
+      prev.map((b) => (b.id === id ? { ...b, ...updates } : b))
+    );
+    addToast('Banner updated!', 'success');
+  };
+
+  const deleteBanner = (id: string) => {
+    setBanners((prev) => prev.filter((b) => b.id !== id));
+    addToast('Banner deleted', 'info');
+  };
+
+  const toggleBannerStatus = (id: string) => {
+    setBanners((prev) =>
+      prev.map((b) => (b.id === id ? { ...b, isActive: !b.isActive } : b))
+    );
+  };
+
   // Notifications
   const markNotificationAsRead = (id: string) => {
     setNotifications((prev) =>
@@ -895,7 +1089,25 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
         reviews,
         addReview,
+        deleteReview,
+        updateReviewStatus,
         getProductReviews,
+
+        users,
+        addUser,
+        toggleUserBlock,
+        changeUserRole,
+        deleteUser,
+
+        payments,
+        refundPayment,
+        markPaymentPaid,
+
+        banners,
+        addBanner,
+        updateBanner,
+        deleteBanner,
+        toggleBannerStatus,
 
         notifications,
         markNotificationAsRead,
