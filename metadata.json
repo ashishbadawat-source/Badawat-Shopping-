@@ -1,0 +1,6 @@
+{
+  "name": "Badawat Shopping",
+  "description": "Shop Smart. Shop Easy. Premium Indian online shopping destination offering electronics, fashion, home, beauty, and lifestyle essentials with fast pan-India delivery.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
